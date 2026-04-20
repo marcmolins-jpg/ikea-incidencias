@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IKEA — Informe de Incidencias</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #003087; --yellow: #FFDA1A; --accent: #0058A3;
+  --text: #111827; --muted: #6B7280; --border: #E5E7EB;
+  --pending: #F59E0B; --solved: #10B981; --open: #3B82F6; --closed: #9CA3AF;
+}
+body { font-family: 'DM Sans', sans-serif; background: #F4F6FA; color: var(--text); }
+header { background: var(--blue); }
+.header-bar { background: var(--yellow); height: 8px; }
+.header-content { padding: 40px 60px 36px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.header-left h1 { font-family: 'DM Serif Display', serif; font-size: 42px; color: #fff; line-height: 1.1; margin-bottom: 8px; }
+.header-left h1 span { color: var(--yellow); font-style: italic; }
+.header-left p { color: rgba(255,255,255,0.6); font-size: 13px; }
+.header-badge { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 16px 24px; text-align: right; flex-shrink: 0; }
+.header-badge .num { font-family: 'DM Serif Display', serif; font-size: 48px; color: var(--yellow); line-height: 1; }
+.header-badge .lbl { font-size: 11px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+main { max-width: 1100px; margin: 0 auto; padding: 48px 32px; }
+.updated { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+.updated strong { color: var(--accent); }
+.metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 40px; }
+.metric-card { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+.metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.metric-card.pending::before { background: var(--pending); }
+.metric-card.solved::before  { background: var(--solved); }
+.metric-card.open::before    { background: var(--open); }
+.metric-card.closed::before  { background: var(--closed); }
+.metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+.metric-value { font-family: 'DM Serif Display', serif; font-size: 40px; line-height: 1; }
+.metric-card.pending .metric-value { color: var(--pending); }
+.metric-card.solved .metric-value  { color: var(--solved); }
+.metric-card.open .metric-value    { color: var(--open); }
+.metric-card.closed .metric-value  { color: var(--closed); }
+.metric-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.section-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--blue); margin-bottom: 20px; }
+.section-title span { font-style: italic; color: var(--accent); }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+.chart-card { background: #fff; border-radius: 16px; padding: 28px; border: 1px solid var(--border); }
+.chart-card.full { grid-column: 1/-1; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
+.chart-wrap { position: relative; height: 240px; }
+.chart-wrap.tall { height: 280px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.defs-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 40px; }
+.def-card { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid var(--border); border-top: 3px solid; transition: transform .15s, box-shadow .15s; }
+.def-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,48,135,.08); }
+.def-card:nth-child(1) { border-top-color: #534AB7; }
+.def-card:nth-child(2) { border-top-color: #1D9E75; }
+.def-card:nth-child(3) { border-top-color: #D85A30; }
+.def-card:nth-child(4) { border-top-color: #D4537E; }
+.def-card:nth-child(5) { border-top-color: #888780; }
+.def-tag { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 8px; border-radius: 4px; margin-bottom: 12px; }
+.def-card:nth-child(1) .def-tag { background:#EEEDFE; color:#3C3489; }
+.def-card:nth-child(2) .def-tag { background:#E1F5EE; color:#085041; }
+.def-card:nth-child(3) .def-tag { background:#FAECE7; color:#712B13; }
+.def-card:nth-child(4) .def-tag { background:#FBEAF0; color:#72243E; }
+.def-card:nth-child(5) .def-tag { background:#F1EFE8; color:#444441; }
+.def-name { font-family: 'DM Serif Display', serif; font-size: 18px; margin-bottom: 8px; }
+.def-count { font-size: 28px; font-weight: 600; margin-bottom: 10px; }
+.def-card:nth-child(1) .def-count { color:#534AB7; }
+.def-card:nth-child(2) .def-count { color:#1D9E75; }
+.def-card:nth-child(3) .def-count { color:#D85A30; }
+.def-card:nth-child(4) .def-count { color:#D4537E; }
+.def-card:nth-child(5) .def-count { color:#888780; }
+.def-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+footer { background: var(--blue); padding: 24px 60px; display: flex; align-items: center; justify-content: space-between; }
+footer p { font-size: 12px; color: rgba(255,255,255,0.45); }
+footer .logo { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--yellow); }
+@media(max-width:768px) {
+  .header-content { padding: 28px 24px; flex-direction: column; }
+  main { padding: 28px 16px; }
+  .metrics-grid { grid-template-columns: repeat(2,1fr); }
+  .charts-grid { grid-template-columns: 1fr; }
+  .defs-grid { grid-template-columns: 1fr; }
+  footer { padding: 20px 24px; flex-direction: column; gap: 8px; text-align: center; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-bar"></div>
+  <div class="header-content">
+    <div class="header-left">
+      <h1>Informe de<br><span>Incidencias</span></h1>
+      <p>IKEA · Nemuru · Datos extraídos de Zendesk</p>
+    </div>
+    <div class="header-badge">
+      <div class="num">42</div>
+      <div class="lbl">tickets totales</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="updated">Última actualización: <strong>20/04/2026 a las 11:34</strong></p>
+
+  <div class="metrics-grid">
+    <div class="metric-card pending">
+      <div class="metric-label">Pendientes</div>
+      <div class="metric-value">31</div>
+      <div class="metric-sub">74% del total</div>
+    </div>
+    <div class="metric-card solved">
+      <div class="metric-label">Resueltos</div>
+      <div class="metric-value">7</div>
+      <div class="metric-sub">17% del total</div>
+    </div>
+    <div class="metric-card open">
+      <div class="metric-label">Abiertos</div>
+      <div class="metric-value">2</div>
+      <div class="metric-sub">5% del total</div>
+    </div>
+    <div class="metric-card closed">
+      <div class="metric-label">Cerrados</div>
+      <div class="metric-value">2</div>
+      <div class="metric-sub">5% del total</div>
+    </div>
+  </div>
+
+  <p class="section-title">Distribución y <span>evolución</span></p>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Tipología de incidencias</div>
+      <div class="chart-wrap"><canvas id="tagsChart"></canvas></div>
+      <div class="legend" id="tagsLegend"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Estado de los tickets</div>
+      <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      <div class="legend" id="statusLegend"></div>
+    </div>
+    <div class="chart-card full">
+      <div class="chart-title">Timeline — tickets por día</div>
+      <div class="chart-wrap tall"><canvas id="timelineChart"></canvas></div>
+      <div class="legend" id="timelineLegend"></div>
+    </div>
+  </div>
+
+  <p class="section-title">Tipos de <span>incidencia</span></p>
+
+  <div class="defs-grid">
+    <div class="def-card">
+      <span class="def-tag">Documental</span>
+      <div class="def-name">Incidencia documental</div>
+      <div class="def-count">20</div>
+      <div class="def-desc">El cliente no puede completar el proceso porque falta documentación, la documentación aportada no es válida o no cumple los requisitos mínimos exigidos por la entidad financiadora.</div>
+    </div>
+    <div class="def-card">
+      <span class="def-tag">Estados</span>
+      <div class="def-name">Incidencia de estados</div>
+      <div class="def-count">13</div>
+      <div class="def-desc">El ticket está bloqueado en un estado intermedio del flujo de solicitud sin avanzar al siguiente paso. Suele requerir intervención manual del equipo de operaciones.</div>
+    </div>
+    <div class="def-card">
+      <span class="def-tag">Firma</span>
+      <div class="def-name">Firma</div>
+      <div class="def-count">11</div>
+      <div class="def-desc">El cliente no ha completado el proceso de firma digital del contrato. Puede deberse a problemas técnicos con el proveedor de firma, caducidad del enlace o falta de acción por parte del cliente.</div>
+    </div>
+    <div class="def-card">
+      <span class="def-tag">KYC</span>
+      <div class="def-name">KYC</div>
+      <div class="def-count">8</div>
+      <div class="def-desc">Incidencia en el proceso de verificación de identidad del cliente (Know Your Customer). El cliente no supera las comprobaciones de identidad o el proceso queda bloqueado en la validación.</div>
+    </div>
+    <div class="def-card">
+      <span class="def-tag">Técnica</span>
+      <div class="def-name">Incidencia técnica</div>
+      <div class="def-count">0</div>
+      <div class="def-desc">Errores derivados de fallos en la integración tecnológica entre IKEA y la plataforma Nemuru. Actualmente sin casos registrados — etiqueta disponible para uso futuro.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>Generado automáticamente desde Zendesk · nemuru.zendesk.com · 20/04/2026 a las 11:34</p>
+  <div class="logo">nemuru</div>
+</footer>
+
+<script>
+const COLORS = ["#534AB7", "#1D9E75", "#D85A30", "#D4537E", "#888780"];
+const TAG_LABELS = ["Inc. estados", "Inc. documental", "KYC", "Firma", "Inc. t\u00e9cnica"];
+const TAG_VALS = [13, 20, 8, 11, 0];
+const DATES = ["02-19", "03-12", "03-16", "03-17", "03-20", "03-23", "03-27", "03-29", "03-30", "04-02", "04-03", "04-04", "04-06", "04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13", "04-14", "04-15", "04-16", "04-17", "04-19", "04-20"];
+const STATUS = {"open": 2, "pending": 31, "solved": 7, "closed": 2};
+const TIMELINE = [{"label": "Inc. estados", "data": [0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 2, 2, 1, 0, 0], "backgroundColor": "#534AB7", "borderRadius": 3, "borderSkipped": false}, {"label": "Inc. documental", "data": [1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 3, 1, 1, 1, 0, 2, 3, 2, 0, 1, 0], "backgroundColor": "#1D9E75", "borderRadius": 3, "borderSkipped": false}, {"label": "KYC", "data": [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 2, 0], "backgroundColor": "#D85A30", "borderRadius": 3, "borderSkipped": false}, {"label": "Firma", "data": [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1], "backgroundColor": "#D4537E", "borderRadius": 3, "borderSkipped": false}, {"label": "Inc. t\u00e9cnica", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "backgroundColor": "#888780", "borderRadius": 3, "borderSkipped": false}];
+const TOTAL = 42;
+
+function legend(id, labels, colors, values) {
+  document.getElementById(id).innerHTML = labels.map((l,i) => `
+    <span class="legend-item">
+      <span class="legend-dot" style="background:${colors[i % colors.length]}"></span>
+      ${l}${values ? ` — ${values[i]} (${Math.round(values[i]/TOTAL*100)}%)` : ''}
+    </span>`).join('');
+}
+
+new Chart(document.getElementById('tagsChart'), {
+  type: 'bar',
+  data: { labels: TAG_LABELS, datasets: [{ data: TAG_VALS, backgroundColor: COLORS, borderRadius: 6, borderSkipped: false }] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.parsed.y} tickets` } } },
+    scales: {
+      x: { ticks: { color:'#6B7280', font:{ size:11, family:'DM Sans' } }, grid:{ display:false } },
+      y: { ticks: { color:'#6B7280', stepSize:5, font:{ family:'DM Sans' } }, grid:{ color:'rgba(0,0,0,0.06)' }, beginAtZero:true }
+    }
+  }
+});
+legend('tagsLegend', TAG_LABELS, COLORS, TAG_VALS);
+
+const statusColors = ['#F59E0B','#10B981','#3B82F6','#9CA3AF'];
+const statusLabels = Object.keys(STATUS);
+const statusVals   = Object.values(STATUS);
+new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: { labels: statusLabels, datasets: [{ data: statusVals, backgroundColor: statusColors, borderWidth:0, hoverOffset:6 }] },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: c => ` ${c.label}: ${c.parsed} (${Math.round(c.parsed/TOTAL*100)}%)` } } }
+  }
+});
+legend('statusLegend', statusLabels, statusColors, statusVals);
+
+new Chart(document.getElementById('timelineChart'), {
+  type: 'bar',
+  data: { labels: DATES, datasets: TIMELINE },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend:{ display:false }, tooltip:{ mode:'index', intersect:false } },
+    scales: {
+      x: { stacked:true, ticks:{ color:'#6B7280', font:{ size:10, family:'DM Sans' }, maxRotation:45, autoSkip:false }, grid:{ display:false } },
+      y: { stacked:true, ticks:{ color:'#6B7280', stepSize:1, font:{ family:'DM Sans' } }, grid:{ color:'rgba(0,0,0,0.06)' }, beginAtZero:true }
+    }
+  }
+});
+legend('timelineLegend', TAG_LABELS, COLORS);
+</script>
+</body>
+</html>
